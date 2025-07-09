@@ -120,7 +120,8 @@
 +      
 +      if (valuesError) {
 +        console.error('Error fetching values:', valuesError);
-+      } else if (valuesData && valuesData.length > 0) {
++   }
+     } else if (valuesData && valuesData.length > 0) {
 +        // Extract values from blueprint
 +        const values = valuesData[0]?.chakra_signature || {};
 +        setUserValues(Object.keys(values));
