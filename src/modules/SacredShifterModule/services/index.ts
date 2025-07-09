@@ -1,0 +1,1 @@
+export { GlobalEventHorizon } from './GlobalEventHorizon';

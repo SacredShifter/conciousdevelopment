@@ -1,24 +1,28 @@
-// Module Registry for Sacred Shifter
 import { IModule } from '../types/ssos';
 import { SacredShifterModule } from './SacredShifterModule';
 import { GlobalEventHorizon } from './SacredShifterModule/services/GlobalEventHorizon';
 
-// Create a shared event horizon for all modules
+// Create shared event horizon
 const sharedEventHorizon = new GlobalEventHorizon();
 
-// Create module instances
+// Create module instances with the shared event horizon
 const sacredShifterModule = new SacredShifterModule(sharedEventHorizon);
 
-// Module registry
+// Module registry for easy access
 const modules: Record<string, IModule> = {
   'sacred-shifter': sacredShifterModule,
 };
 
-// Module Manager
+// Export ModuleManager for SSOS integration
 export class ModuleManager {
+  // Get a module by name
+  static getModule(id: string): IModule | null {
+    return modules[id] || null;
+  }
+
+  // Initialize all modules or a specific one
   static async initialize(moduleId?: string): Promise<void> {
     if (moduleId) {
-      // Initialize a specific module
       const module = modules[moduleId];
       if (module) {
         await module.initialize();
@@ -26,14 +30,13 @@ export class ModuleManager {
         console.error(`Module ${moduleId} not found`);
       }
     } else {
-      // Initialize all modules
-      for (const id in modules) {
-        await modules[id].initialize();
-      }
+      // Initialize all modules in parallel
+      await Promise.all(Object.values(modules).map(module => module.initialize()));
     }
   }
 
-  static async activateModule(moduleId: string): Promise<void> {
+  // Activate a specific module
+  static async activate(moduleId: string): Promise<void> {
     const module = modules[moduleId];
     if (module) {
       await module.activate();
@@ -42,7 +45,8 @@ export class ModuleManager {
     }
   }
 
-  static async deactivateModule(moduleId: string): Promise<void> {
+  // Deactivate a specific module
+  static async deactivate(moduleId: string): Promise<void> {
     const module = modules[moduleId];
     if (module) {
       await module.deactivate();
@@ -51,14 +55,23 @@ export class ModuleManager {
     }
   }
 
-  static getModule(moduleId: string): IModule | null {
-    return modules[moduleId] || null;
-  }
-
+  // Get all modules
   static getAllModules(): Record<string, IModule> {
     return { ...modules };
   }
+
+  // Register a new module
+  static register(moduleId: string, module: IModule): void {
+    modules[moduleId] = module;
+  }
+
+  // Check if a module is active using its ping method
+  static isActive(moduleId: string): boolean {
+    const module = modules[moduleId];
+    return module ? module.ping?.() ?? false : false;
+  }
 }
 
-// Export individual modules
+// Export the instances for direct access
 export { sacredShifterModule };
+export { sharedEventHorizon };
