@@ -165,10 +165,10 @@ export function SacredShifterComponent() {
     if (isSimulationActive) {
       biofeedbackIntervalRef.current = setInterval(() => {
         setBiofeedbackData(prev => ({
+          ...prev,
           heartRate: prev.heartRate + (Math.random() * 2 - 1),
           stressLevel: Math.max(0, Math.min(100, prev.stressLevel + (Math.random() * 4 - 2))),
-          coherence: Math.max(0, Math.min(100, prev.coherence + (Math.random() * 4 - 2))),
-          presence: Math.max(0, Math.min(100, prev.presence + (Math.random() * 4 - 2)))
+          coherenceScore: Math.max(0, Math.min(1, prev.coherenceScore + (Math.random() * 0.1 - 0.05)))
         }));
       }, 2000);
     }
@@ -239,11 +239,6 @@ export function SacredShifterComponent() {
         ? Math.max(0, Math.min(100, prev.stressLevel + delta))
         : Math.max(40, Math.min(180, prev.heartRate + delta))
     }));
-  };
-      });
-    } catch (error) {
-      console.error('Error saving energy level:', error);
-    }
   };
 
   const renderSection = () => {
