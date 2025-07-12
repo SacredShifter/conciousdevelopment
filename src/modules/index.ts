@@ -1,6 +1,6 @@
-import { IModule } from '../types/ssos';
-import { SacredShifterModule } from './SacredShifterModule';
-import { GlobalEventHorizon } from './SacredShifterModule/services/GlobalEventHorizon';
+import { IModule } from '@types/ssos';
+import { SacredShifterModule } from '@modules/SacredShifterModule';
+import { GlobalEventHorizon } from '@services/GlobalEventHorizon';
 
 // Create shared event horizon
 const sharedEventHorizon = new GlobalEventHorizon();

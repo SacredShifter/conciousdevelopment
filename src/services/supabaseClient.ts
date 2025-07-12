@@ -3,14 +3,28 @@ import { createClient } from '@supabase/supabase-js';
 // Environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceRole = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_SECRET;
 
-// Create Supabase client with error handling
+// Create standard Supabase client with anon key
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co', 
   supabaseAnonKey || 'placeholder-key',
   {
     auth: {
       persistSession: true
+    }
+  }
+);
+
+// Create admin client with service role key (for server-side operations only)
+// WARNING: This should never be exposed to the client side
+export const supabaseAdmin = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseServiceRole || 'placeholder-service-role-key',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
     }
   }
 );
@@ -36,6 +50,49 @@ export const getCurrentUserId = async (): Promise<string | null> => {
   } catch (error) {
     console.error('Error in getCurrentUserId:', error);
     return null;
+  }
+};
+
+// Helper functions for user settings
+export const getUserSettings = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('sacred_shifter_user_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
+      console.error('Error fetching user settings:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error in getUserSettings:', error);
+    return null;
+  }
+};
+
+export const updateUserSettings = async (userId: string, settings: any) => {
+  try {
+    const { error } = await supabase
+      .from('sacred_shifter_user_settings')
+      .upsert({
+        user_id: userId,
+        ...settings,
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('Error updating user settings:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in updateUserSettings:', error);
+    return false;
   }
 };
 
@@ -121,49 +178,6 @@ export const updateMilestone = async (milestone: any) => {
     return true;
   } catch (error) {
     console.error('Error in updateMilestone:', error);
-    return false;
-  }
-};
-
-// Helper functions for user settings
-export const getUserSettings = async (userId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('sacred_shifter_user_settings')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
-      console.error('Error fetching user settings:', error);
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error in getUserSettings:', error);
-    return null;
-  }
-};
-
-export const updateUserSettings = async (userId: string, settings: any) => {
-  try {
-    const { error } = await supabase
-      .from('sacred_shifter_user_settings')
-      .upsert({
-        user_id: userId,
-        ...settings,
-        updated_at: new Date().toISOString()
-      });
-    
-    if (error) {
-      console.error('Error updating user settings:', error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error in updateUserSettings:', error);
     return false;
   }
 };

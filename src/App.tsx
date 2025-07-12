@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SacredShifterComponent } from './components/SacredShifterComponent';
-import { ModuleManager } from './modules';
+import { SacredShifterComponent } from '@components/SacredShifterComponent';
+import { ModuleManager } from '@/modules';
 
 function App() {
   const [isModuleReady, setIsModuleReady] = useState(false);

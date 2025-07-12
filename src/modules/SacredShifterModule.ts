@@ -1,3 +1,5 @@
+import { SacredShifterComponent } from '@components/SacredShifterComponent';
+import { GlobalEventHorizon } from '@services/GlobalEventHorizon';
 import { IModule, ModuleManifest, GESemanticEvent } from '../types/ssos';
 import { GlobalEventHorizon } from './SacredShifterModule/services/GlobalEventHorizon';
 import { SacredShifterComponent } from '../components/SacredShifterComponent';
@@ -413,7 +415,5 @@ export class SacredShifterModule implements IModule {
 
   private async recalibrateSpiritual(): Promise<void> {
     console.log('Recalibrating spiritual systems...');
+import { IModule, ModuleManifest, GESemanticEvent } from '@types/ssos';
     // Recalibration logic
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-}

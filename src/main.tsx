@@ -2,9 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-
 // Initialize Sacred Shifter Module
-import { ModuleManager } from './modules';
+import { ModuleManager } from '@/modules';
 
 // Initialize and activate the module
 async function initializeApp() {
