@@ -1,6 +1,6 @@
-import { IModule, ModuleManifest, GESemanticEvent } from './types/ssos';
+import { IModule, ModuleManifest, GESemanticEvent } from '../types/ssos';
 import { GlobalEventHorizon } from './SacredShifterModule/services/GlobalEventHorizon';
-import { SacredShifterComponent } from './SacredShifterModule/components/SacredShifterComponent';
+import { SacredShifterComponent } from '../components/SacredShifterComponent';
 import { CoreValuesExplorer } from './SacredShifterModule/components/CoreValuesExplorer';
 import { PurposeClarifier } from './SacredShifterModule/components/PurposeClarifier';
 import { DreamAnalysis } from './SacredShifterModule/components/DreamAnalysis';

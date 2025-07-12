@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Brain, Heart, Compass, Sparkles, Moon, Sun, Users, BarChart3, MessageCircle, Star, Zap, Eye, Infinity, BookOpen, Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { supabase, getCurrentUserId, getUserSettings, updateUserSettings } from '../services/supabaseClient';
+import { supabase, getCurrentUserId, getUserSettings, updateUserSettings } from './services/supabaseClient';
 import { CoreValuesExplorer } from './CoreValuesExplorer';
 import { PurposeClarifier } from './PurposeClarifier';
-import type { BiofeedbackData } from '../types/ssos';
+import type { BiofeedbackData } from './types';
 
 const universalPrinciples = [
   {
