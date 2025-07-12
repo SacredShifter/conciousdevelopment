@@ -415,5 +415,7 @@ export class SacredShifterModule implements IModule {
 
   private async recalibrateSpiritual(): Promise<void> {
     console.log('Recalibrating spiritual systems...');
+  }
+}
 import { IModule, ModuleManifest, GESemanticEvent } from '@types/ssos';
     // Recalibration logic
