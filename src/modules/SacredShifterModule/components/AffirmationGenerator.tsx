@@ -1,196 +1,167 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Heart, Brain, Target, Shuffle, Copy, Save, Star } from 'lucide-react';
-import { supabase, getCurrentUserId } from '../../services/supabaseClient';
 
 interface PersonalizedAffirmation {
   id: string;
   text: string;
-  category: string;
+  category: 'values' | 'purpose' | 'blocks' | 'general';
   personalizedFor: string[];
   createdAt: Date;
   favorited: boolean;
   usageCount: number;
 }
 
-export const AffirmationGenerator: React.FC = () => {
-  const [currentAffirmation, setCurrentAffirmation] = useState<PersonalizedAffirmation | null>(null);
+const affirmationTemplates = {
+  values: [
+    "I honor my value of {value} in every decision I make",
+    "My commitment to {value} guides me toward authentic living", 
+    "I embody {value} with grace and consistency",
+    "Through {value}, I create positive impact in the world",
+    "I am aligned with my core value of {value}",
+    "My life reflects the beauty of {value} in all its forms"
+  ],
+  purpose: [
+    "I am fulfilling my purpose by {purpose}",
+    "My unique gifts of {gift} serve the highest good",
+    "I trust in my calling to {purpose}",
+    "Every day I move closer to manifesting {purpose}",
+    "My purpose of {purpose} flows through me effortlessly",
+    "I am exactly where I need to be on my path to {purpose}"
+  ],
+  blocks: [
+    "I release the limiting belief that {block} defines me",
+    "I transform my {block} into wisdom and strength",
+    "I am greater than my {block} and choose love over fear",
+    "Where once I felt {block}, I now cultivate {opposite}",
+    "I lovingly heal the part of me that experiences {block}",
+    "My {block} is dissolving as I step into my true power"
+  ],
+  general: [
+    "I am worthy of all the love and abundance life offers",
+    "I trust my inner wisdom to guide me perfectly",
+    "I am safe to be my authentic self in all situations",
+    "I choose thoughts that empower and uplift me",
+    "I am grateful for my journey and excited for what's coming",
+    "I radiate love, peace, and positive energy wherever I go"
+  ]
+};
+
+const blockToOpposite = {
+  'fear': 'courage',
+  'anxiety': 'peace',
+  'doubt': 'trust',
+  'anger': 'compassion',
+  'sadness': 'joy',
+  'overwhelm': 'clarity',
+  'procrastination': 'action',
+  'perfectionism': 'acceptance',
+  'unworthiness': 'self-love',
+  'scarcity': 'abundance',
+  'insecurity': 'confidence',
+  'judgment': 'acceptance'
+};
+
+export function AffirmationGenerator() {
   const [affirmations, setAffirmations] = useState<PersonalizedAffirmation[]>([]);
   const [userValues, setUserValues] = useState<string[]>([]);
-  const [userPurpose, setUserPurpose] = useState<string[]>([]);
   const [userBlocks, setUserBlocks] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [userPurpose, setUserPurpose] = useState<string[]>([]);
+  const [currentAffirmation, setCurrentAffirmation] = useState<PersonalizedAffirmation | null>(null);
+  const [generationMode, setGenerationMode] = useState<'auto' | 'custom'>('auto');
   const [customInput, setCustomInput] = useState('');
 
   useEffect(() => {
-    loadUserData();
+    // Load user data from other modules
+    loadUserProfile();
+    
+    // Load saved affirmations
+    const saved = localStorage.getItem('personalizedAffirmations');
+    if (saved) {
+      setAffirmations(JSON.parse(saved).map((a: any) => ({
+        ...a,
+        createdAt: new Date(a.createdAt)
+      })));
+    }
   }, []);
 
-  const loadUserData = async () => {
-    try {
-      // Load user data
-      await loadUserProfile();
-      
-      // Load saved affirmations
-      const userId = await getCurrentUserId();
-      if (!userId) return;
-      
-      const { data, error } = await supabase
-        .from('user_intentions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error('Error loading affirmations:', error);
-        return;
-      }
-      
-      if (data && data.length > 0) {
-        setAffirmations(data.map((a: any) => ({
-          id: a.id,
-          text: a.intention,
-          category: a.category || 'general',
-          personalizedFor: a.tags || [],
-          createdAt: new Date(a.created_at),
-          favorited: a.is_favorite || false,
-          usageCount: a.usage_count || 0
-        })));
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    }
-  };
-  
-  const saveAffirmationToDatabase = async (affirmation: PersonalizedAffirmation) => {
-    try {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
-      
-      const { error } = await supabase
-        .from('user_intentions')
-        .upsert({
-          id: affirmation.id,
-          user_id: userId,
-          title: affirmation.category.charAt(0).toUpperCase() + affirmation.category.slice(1),
-          intention: affirmation.text,
-          category: affirmation.category,
-          tags: affirmation.personalizedFor,
-          is_favorite: affirmation.favorited,
-          usage_count: affirmation.usageCount,
-          created_at: affirmation.createdAt.toISOString(),
-          updated_at: new Date().toISOString()
-        });
-      
-      if (error) {
-        console.error('Error saving affirmation:', error);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem('personalizedAffirmations', JSON.stringify(affirmations));
+  }, [affirmations]);
 
-  const loadUserProfile = async () => {
-    try {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
-      
-      // Get core values
-      const { data: valuesData, error: valuesError } = await supabase
-        .from('sacred_blueprints')
-        .select('*')
-        .eq('user_id', userId);
-      
-      if (valuesError) {
-        console.error('Error fetching values:', valuesError);
-      } else if (valuesData && valuesData.length > 0) {
-        // Extract values from blueprint
-        const values = valuesData[0]?.chakra_signature || {};
-        setUserValues(Object.keys(values));
-      }
-      
-      // Get purpose reflections
-      const { data: purposeData, error: purposeError } = await supabase
-        .from('insight_reflections')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (purposeError) {
-        console.error('Error fetching purpose reflections:', purposeError);
-      } else if (purposeData && purposeData.length > 0) {
-        const purposes = purposeData
-          .filter((r: any) => r.journey_slug === 'purpose')
-          .map((r: any) => r.content)
-          .slice(0, 3);
-        setUserPurpose(purposes);
-      }
-      
-      // Common blocks from unblocking practices
-      setUserBlocks(['fear', 'self-doubt', 'perfectionism', 'overwhelm']);
-    } catch (error) {
-      console.error('Error in loadUserProfile:', error);
+  const loadUserProfile = () => {
+    // Extract user data from localStorage of other modules
+    const coreValues = localStorage.getItem('coreValues');
+    const purposeReflections = localStorage.getItem('purposeReflections');
+    const dreamData = localStorage.getItem('dreams');
+    
+    if (coreValues) {
+      const values = JSON.parse(coreValues);
+      setUserValues(values.map((v: any) => v.name));
     }
+    
+    if (purposeReflections) {
+      const reflections = JSON.parse(purposeReflections);
+      const purposes = reflections
+        .filter((r: any) => r.category === 'purpose')
+        .map((r: any) => r.response)
+        .slice(0, 3);
+      setUserPurpose(purposes);
+    }
+
+    // Common blocks from unblocking practices
+    setUserBlocks(['fear', 'self-doubt', 'perfectionism', 'overwhelm']);
   };
 
   const generatePersonalizedAffirmation = () => {
-    const templates = {
-      values: [
-        "I embody {value} in all my actions",
-        "My commitment to {value} guides my path",
-        "I am aligned with my core value of {value}",
-        "Through {value}, I create positive change"
-      ],
-      purpose: [
-        "I am walking my path of {purpose} with confidence",
-        "My purpose to {purpose} unfolds perfectly",
-        "I trust the process of {purpose} in my life",
-        "Every step brings me closer to {purpose}"
-      ],
-      blocks: [
-        "I release {block} and embrace my power",
-        "I transform {block} into wisdom and strength",
-        "I am stronger than {block} that once held me back",
-        "I choose growth over {block}"
-      ],
-      general: [
-        "I am exactly where I need to be",
-        "I trust in my journey and my timing",
-        "I am open to receiving all the good life offers",
-        "My potential is limitless",
-        "I choose peace and presence in this moment"
-      ]
-    };
-
-    let affirmation = '';
-    let category = 'general';
+    let template: string;
+    let category: PersonalizedAffirmation['category'];
     let personalizedFor: string[] = [];
 
-    if (userValues.length > 0 && Math.random() > 0.5) {
-      const value = userValues[Math.floor(Math.random() * userValues.length)];
-      const template = templates.values[Math.floor(Math.random() * templates.values.length)];
-      affirmation = template.replace('{value}', value.toLowerCase());
-      category = 'values';
-      personalizedFor = [value];
-    } else if (userPurpose.length > 0 && Math.random() > 0.5) {
-      const purpose = userPurpose[Math.floor(Math.random() * userPurpose.length)];
-      const template = templates.purpose[Math.floor(Math.random() * templates.purpose.length)];
-      affirmation = template.replace('{purpose}', purpose.toLowerCase());
-      category = 'purpose';
-      personalizedFor = [purpose];
-    } else if (userBlocks.length > 0 && Math.random() > 0.3) {
-      const block = userBlocks[Math.floor(Math.random() * userBlocks.length)];
-      const template = templates.blocks[Math.floor(Math.random() * templates.blocks.length)];
-      affirmation = template.replace('{block}', block);
-      category = 'unblocking';
-      personalizedFor = [block];
-    } else {
-      affirmation = templates.general[Math.floor(Math.random() * templates.general.length)];
+    // Choose category based on user data availability
+    const categories = [];
+    if (userValues.length > 0) categories.push('values');
+    if (userPurpose.length > 0) categories.push('purpose');
+    if (userBlocks.length > 0) categories.push('blocks');
+    categories.push('general');
+
+    category = categories[Math.floor(Math.random() * categories.length)] as PersonalizedAffirmation['category'];
+    
+    switch (category) {
+      case 'values':
+        template = affirmationTemplates.values[Math.floor(Math.random() * affirmationTemplates.values.length)];
+        const value = userValues[Math.floor(Math.random() * userValues.length)];
+        template = template.replace('{value}', value.toLowerCase());
+        personalizedFor = [value];
+        break;
+        
+      case 'purpose':
+        template = affirmationTemplates.purpose[Math.floor(Math.random() * affirmationTemplates.purpose.length)];
+        if (userPurpose.length > 0) {
+          const purpose = userPurpose[Math.floor(Math.random() * userPurpose.length)];
+          template = template.replace('{purpose}', purpose.toLowerCase());
+          template = template.replace('{gift}', 'wisdom and compassion');
+          personalizedFor = ['purpose'];
+        }
+        break;
+        
+      case 'blocks':
+        template = affirmationTemplates.blocks[Math.floor(Math.random() * affirmationTemplates.blocks.length)];
+        const block = userBlocks[Math.floor(Math.random() * userBlocks.length)];
+        const opposite = blockToOpposite[block as keyof typeof blockToOpposite] || 'strength';
+        template = template.replace('{block}', block);
+        template = template.replace('{opposite}', opposite);
+        personalizedFor = [block];
+        break;
+        
+      default:
+        template = affirmationTemplates.general[Math.floor(Math.random() * affirmationTemplates.general.length)];
+        category = 'general';
+        break;
     }
 
     const newAffirmation: PersonalizedAffirmation = {
       id: Date.now().toString(),
-      text: affirmation,
+      text: template,
       category,
       personalizedFor,
       createdAt: new Date(),
@@ -203,11 +174,11 @@ export const AffirmationGenerator: React.FC = () => {
 
   const generateCustomAffirmation = () => {
     if (!customInput.trim()) return;
-
+    
     const customAffirmation: PersonalizedAffirmation = {
       id: Date.now().toString(),
-      text: customInput.trim(),
-      category: 'custom',
+      text: customInput,
+      category: 'general',
       personalizedFor: ['custom'],
       createdAt: new Date(),
       favorited: false,
@@ -220,229 +191,229 @@ export const AffirmationGenerator: React.FC = () => {
 
   const saveAffirmation = (affirmation: PersonalizedAffirmation) => {
     const exists = affirmations.find(a => a.text === affirmation.text);
-    if (exists) return;
-    
-    // Add to state
-    const newAffirmations = [affirmation, ...affirmations];
-    setAffirmations(newAffirmations);
-    
-    // Save to database
-    saveAffirmationToDatabase(affirmation);
+    if (!exists) {
+      setAffirmations([affirmation, ...affirmations]);
+    }
   };
 
-  const toggleFavorite = async (id: string) => {
-    const updatedAffirmations = affirmations.map(a => 
+  const toggleFavorite = (id: string) => {
+    setAffirmations(affirmations.map(a => 
       a.id === id ? { ...a, favorited: !a.favorited } : a
-    );
-    
-    setAffirmations(updatedAffirmations);
-    
-    // Update in database
-    const affirmation = updatedAffirmations.find(a => a.id === id);
-    if (affirmation) {
-      saveAffirmationToDatabase(affirmation);
-    }
+    ));
   };
 
-  const incrementUsage = async (id: string) => {
-    const updatedAffirmations = affirmations.map(a => 
+  const incrementUsage = (id: string) => {
+    setAffirmations(affirmations.map(a => 
       a.id === id ? { ...a, usageCount: a.usageCount + 1 } : a
-    );
-    
-    setAffirmations(updatedAffirmations);
-    
-    // Update in database
-    const affirmation = updatedAffirmations.find(a => a.id === id);
-    if (affirmation) {
-      saveAffirmationToDatabase(affirmation);
-    }
+    ));
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    // You could add a toast notification here
   };
 
-  const filteredAffirmations = selectedCategory === 'all' 
-    ? affirmations 
-    : affirmations.filter(a => a.category === selectedCategory);
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      values: 'text-rose-400',
+      purpose: 'text-indigo-400', 
+      blocks: 'text-purple-400',
+      general: 'text-teal-400'
+    };
+    return colors[category as keyof typeof colors] || 'text-gray-400';
+  };
 
-  const categories = [
-    { value: 'all', label: 'All' },
-    { value: 'values', label: 'Values' },
-    { value: 'purpose', label: 'Purpose' },
-    { value: 'unblocking', label: 'Unblocking' },
-    { value: 'custom', label: 'Custom' },
-    { value: 'general', label: 'General' }
-  ];
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'values': return Heart;
+      case 'purpose': return Target;
+      case 'blocks': return Brain;
+      default: return Sparkles;
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Sparkles className="w-8 h-8 text-yellow-400" />
-            <h1 className="text-4xl font-bold text-white">Affirmation Generator</h1>
-            <Heart className="w-8 h-8 text-pink-400" />
-          </div>
-          <p className="text-xl text-blue-200">
-            Personalized affirmations based on your values, purpose, and growth journey
-          </p>
+    <div className="p-8">
+      <div className="flex items-center space-x-3 mb-8">
+        <Sparkles className="w-8 h-8 text-teal-400" />
+        <div>
+          <h2 className="text-2xl font-bold text-white">Affirmation Generator</h2>
+          <p className="text-purple-200/80">Personalized mantras for your consciousness journey</p>
         </div>
+      </div>
 
-        {/* Current Affirmation Display */}
-        {currentAffirmation && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 text-center border border-white/20">
-            <div className="text-2xl md:text-3xl font-semibold text-white mb-6 leading-relaxed">
-              "{currentAffirmation.text}"
-            </div>
-            
-            <div className="flex flex-wrap gap-2 justify-center mb-6">
-              <span className="px-3 py-1 bg-purple-500/30 text-purple-200 rounded-full text-sm">
-                {currentAffirmation.category}
-              </span>
-              {currentAffirmation.personalizedFor.map((item, index) => (
-                <span key={index} className="px-3 py-1 bg-blue-500/30 text-blue-200 rounded-full text-sm">
-                  {item}
-                </span>
-              ))}
-            </div>
-
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => copyToClipboard(currentAffirmation.text)}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                <Copy className="w-5 h-5" />
-                Copy
-              </button>
-              <button
-                onClick={() => saveAffirmation(currentAffirmation)}
-                className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                <Save className="w-5 h-5" />
-                Save
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Generation Controls */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-8 border border-white/20">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <Brain className="w-6 h-6 text-blue-400" />
-                Generate Personalized
-              </h3>
-              <button
-                onClick={generatePersonalizedAffirmation}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all transform hover:scale-105"
-              >
-                <Shuffle className="w-5 h-5" />
-                Generate Affirmation
-              </button>
-            </div>
-
-            <div>
-              <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <Target className="w-6 h-6 text-green-400" />
-                Create Custom
-              </h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customInput}
-                  onChange={(e) => setCustomInput(e.target.value)}
-                  placeholder="Write your custom affirmation..."
-                  className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  onKeyPress={(e) => e.key === 'Enter' && generateCustomAffirmation()}
-                />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Generator Section */}
+        <div className="lg:col-span-2">
+          <div className="bg-white/5 p-8 rounded-2xl border border-purple-500/20 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-white">Generate Affirmation</h3>
+              <div className="flex space-x-2">
                 <button
-                  onClick={generateCustomAffirmation}
-                  className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  onClick={() => setGenerationMode('auto')}
+                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                    generationMode === 'auto'
+                      ? 'bg-teal-500/30 text-teal-200 border border-teal-400/30'
+                      : 'text-purple-200 hover:bg-white/5'
+                  }`}
                 >
-                  Create
+                  Personalized
+                </button>
+                <button
+                  onClick={() => setGenerationMode('custom')}
+                  className={`px-3 py-1 rounded-lg text-sm transition-all ${
+                    generationMode === 'custom'
+                      ? 'bg-teal-500/30 text-teal-200 border border-teal-400/30'
+                      : 'text-purple-200 hover:bg-white/5'
+                  }`}
+                >
+                  Custom
                 </button>
               </div>
             </div>
+
+            {generationMode === 'auto' ? (
+              <div className="text-center">
+                <p className="text-purple-200/70 mb-6">
+                  Generate affirmations based on your values, purpose, and growth areas
+                </p>
+                <button
+                  onClick={generatePersonalizedAffirmation}
+                  className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-blue-600 text-white rounded-lg hover:from-teal-600 hover:to-blue-700 transition-all mx-auto"
+                >
+                  <Shuffle className="w-5 h-5" />
+                  <span>Generate Affirmation</span>
+                </button>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Create Your Own Affirmation
+                </label>
+                <textarea
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  className="w-full h-20 px-4 py-3 bg-white/10 border border-purple-500/30 rounded-lg text-white placeholder-purple-300/50 focus:outline-none focus:border-purple-400 resize-none"
+                  placeholder="Write your personal affirmation or mantra..."
+                />
+                <button
+                  onClick={generateCustomAffirmation}
+                  disabled={!customInput.trim()}
+                  className="mt-4 flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-all disabled:opacity-50"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  <span>Create Affirmation</span>
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Current Affirmation Display */}
+          {currentAffirmation && (
+            <div className="bg-gradient-to-br from-teal-500/20 to-blue-500/20 p-8 rounded-2xl border border-teal-500/30 text-center">
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                {React.createElement(getCategoryIcon(currentAffirmation.category), {
+                  className: `w-6 h-6 ${getCategoryColor(currentAffirmation.category)}`
+                })}
+                <span className={`text-sm font-medium capitalize ${getCategoryColor(currentAffirmation.category)}`}>
+                  {currentAffirmation.category}
+                </span>
+              </div>
+              
+              <p className="text-2xl font-medium text-white leading-relaxed mb-6">
+                "{currentAffirmation.text}"
+              </p>
+
+              {currentAffirmation.personalizedFor.length > 0 && currentAffirmation.personalizedFor[0] !== 'custom' && (
+                <div className="mb-6">
+                  <p className="text-sm text-teal-300 mb-2">Personalized for:</p>
+                  <div className="flex justify-center flex-wrap gap-2">
+                    {currentAffirmation.personalizedFor.map((item, index) => (
+                      <span key={index} className="px-3 py-1 bg-teal-500/20 text-teal-200 text-sm rounded-full">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={() => copyToClipboard(currentAffirmation.text)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>Copy</span>
+                </button>
+                <button
+                  onClick={() => saveAffirmation(currentAffirmation)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Saved Affirmations */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-semibold text-white">Your Affirmations</h3>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {categories.map(cat => (
-                <option key={cat.value} value={cat.value} className="bg-gray-800">
-                  {cat.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="lg:col-span-1">
+          <h3 className="text-lg font-semibold text-purple-200 mb-4">Your Affirmations</h3>
+          
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {filteredAffirmations.map(affirmation => (
-              <div key={affirmation.id} className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-white text-lg mb-2">"{affirmation.text}"</p>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      <span className="px-2 py-1 bg-purple-500/30 text-purple-200 rounded text-xs">
-                        {affirmation.category}
-                      </span>
-                      {affirmation.personalizedFor.map((item, index) => (
-                        <span key={index} className="px-2 py-1 bg-blue-500/30 text-blue-200 rounded text-xs">
-                          {item}
+            {affirmations
+              .sort((a, b) => (b.favorited ? 1 : 0) - (a.favorited ? 1 : 0))
+              .map((affirmation) => {
+                const Icon = getCategoryIcon(affirmation.category);
+                return (
+                  <div key={affirmation.id} className="bg-white/5 p-4 rounded-lg border border-purple-500/20">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Icon className={`w-4 h-4 ${getCategoryColor(affirmation.category)}`} />
+                        <span className={`text-xs capitalize ${getCategoryColor(affirmation.category)}`}>
+                          {affirmation.category}
                         </span>
-                      ))}
+                      </div>
+                      <button
+                        onClick={() => toggleFavorite(affirmation.id)}
+                        className={`${affirmation.favorited ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'} transition-colors`}
+                      >
+                        <Star className={`w-4 h-4 ${affirmation.favorited ? 'fill-current' : ''}`} />
+                      </button>
                     </div>
-                    <div className="text-gray-400 text-sm">
-                      Used {affirmation.usageCount} times • {affirmation.createdAt.toLocaleDateString()}
+                    
+                    <p className="text-sm text-white mb-3 leading-relaxed">
+                      "{affirmation.text}"
+                    </p>
+                    
+                    <div className="flex items-center justify-between text-xs text-purple-300">
+                      <span>Used {affirmation.usageCount} times</span>
+                      <button
+                        onClick={() => {
+                          setCurrentAffirmation(affirmation);
+                          incrementUsage(affirmation.id);
+                        }}
+                        className="text-teal-400 hover:text-teal-300"
+                      >
+                        Use Again
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => toggleFavorite(affirmation.id)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        affirmation.favorited 
-                          ? 'bg-yellow-600 text-yellow-200' 
-                          : 'bg-white/10 text-gray-400 hover:text-yellow-400'
-                      }`}
-                    >
-                      <Star className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => copyToClipboard(affirmation.text)}
-                      className="p-2 bg-white/10 text-gray-400 hover:text-white rounded-lg transition-colors"
-                    >
-                      <Copy className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => incrementUsage(affirmation.id)}
-                      className="p-2 bg-white/10 text-gray-400 hover:text-green-400 rounded-lg transition-colors"
-                    >
-                      <Target className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
           </div>
 
-          {filteredAffirmations.length === 0 && (
-            <div className="text-center text-gray-400 py-8">
-              No affirmations saved yet. Generate some to get started!
+          {affirmations.length === 0 && (
+            <div className="text-center py-8">
+              <Sparkles className="w-12 h-12 text-teal-400/50 mx-auto mb-3" />
+              <p className="text-teal-200/60 text-sm">
+                Your saved affirmations will appear here
+              </p>
             </div>
           )}
         </div>
       </div>
     </div>
   );
-};
-
-export default AffirmationGenerator;
+}

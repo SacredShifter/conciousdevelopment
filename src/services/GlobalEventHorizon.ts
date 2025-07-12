@@ -1,4 +1,4 @@
-import { GESemanticEvent } from '@types/ssos';
+import { GESemanticEvent } from '../types/ssos';
 
 export class GlobalEventHorizon {
   private eventListeners: Map<string, Set<(event: GESemanticEvent) => void>> = new Map();

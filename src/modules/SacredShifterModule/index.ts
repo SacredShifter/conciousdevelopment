@@ -1,10 +1,14 @@
-// Re-export module components and services for easier imports
-export { SacredShifterModule } from './SacredShifterModule';
-export { SacredShifterComponent } from './components/SacredShifterComponent';
+import { SacredShifterModule } from './SacredShifterModule';
+import { manifest } from './manifest';
+
+// Create and export an instance with the manifest
+export default new SacredShifterModule(manifest);
+
+// Export components and other utilities for direct access
 export * from './components';
 export * from './services';
-export * from './types/ssos';
+export * from './types';
 
-// Default export of the module
-import { SacredShifterModule } from '../SacredShifterModule';
-export default new SacredShifterModule();
+// Export the module class for manual instantiation if needed
+export { SacredShifterModule };
+export { manifest as sacredShifterManifest };

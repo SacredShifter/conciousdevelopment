@@ -1,5 +1,5 @@
 import React from 'react';
-import { SacredShifterComponent } from './components/SacredShifterModule';
+import { SacredShifterComponent } from './components/SacredShifterComponent';
 
 function App() {
   return <SacredShifterComponent />;

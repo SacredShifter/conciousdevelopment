@@ -17,7 +17,6 @@ export interface IModule {
   deactivate(): Promise<void>;
   destroy(): Promise<void>;
   getExposedItems(): Record<string, any>;
-  ping?(): boolean;
 }
 
 export interface GESemanticEvent {
@@ -37,7 +36,7 @@ export interface GlobalEventHorizon {
 export interface BiofeedbackData {
   stressLevel: number; // 0-100, where 0 is completely calm and 100 is maximum stress
   heartRate: number; // BPM, typically 60-100 for resting adult
-  heartRateVariability?: number; // 0-100, higher = better coherence
+  heartRateVariability: number; // 0-100, higher = better coherence
   brainwaveState: 'gamma' | 'beta' | 'alpha' | 'theta' | 'delta';
   coherenceScore: number; // 0-1, overall harmony between heart, mind, emotions
   timestamp: Date;
@@ -112,7 +111,7 @@ export interface DailyPractice {
   id: string;
   name: string;
   description: string;
-  frequency: 'daily' | 'weekly' | 'monthly' | 'once';
+  frequency: 'daily' | 'weekly' | 'monthly';
   timeOfDay: 'morning' | 'afternoon' | 'evening' | 'anytime';
   completed: boolean;
   streak: number;
@@ -135,33 +134,4 @@ export interface SpiritualState {
   chakraAlignment: string;
   meditationDepth: number;
   consciousnessLevel: string;
-}
-
-export interface Milestone {
-  id: string;
-  title: string;
-  description: string;
-  target: number;
-  current: number;
-  category: string;
-  completed: boolean;
-  completedAt?: Date;
-}
-
-export interface CalendarDay {
-  date: Date;
-  dayNumber: number;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  data?: ProgressData;
-}
-
-export interface ProgressData {
-  date: string;
-  valuesReflections: number;
-  purposeReflections: number;
-  meditationMinutes: number;
-  practicesCompleted: number;
-  dreamsRecorded: number;
-  insights: string[];
 }
